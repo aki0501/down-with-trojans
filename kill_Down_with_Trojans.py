@@ -30,13 +30,60 @@ def DP(n, H, tile_types, tile_values):
     # Placeholder function - implement your logic here
     # Your code to check whether it is possible to reach the bottom-right
     # corner without running out of HP should go here.
+
     # You should use dynamic programming to solve the problem.
     # Return True if possible, False otherwise.
 
     # By defualt we return False
-    # TODO you should change this
-    res = False
+
+    memo = [[None] * n] * n
+    res = helper(n, H, tile_types, tile_values, memo, 0, 0, False, False)
+
     return res
+
+
+def helper(n, H, tile_types, tile_values, memo, x, y, protection, multiplier):
+    # Check bounds
+    if x >= n or y >= n:
+        return False
+
+    # Update hitpoints for current tile
+    tile_value = tile_values[x][y]
+    tile_type = tile_types[x][y]
+
+    if tile_type == 0:               # DAMAGE
+        if protection == False:
+            H -= tile_value
+        else:
+            protection = False
+    elif tile_type == 1:             # HEALING
+        if multiplier == True:
+            H += (2*tile_value)
+            multiplier = False
+        else:
+            H += tile_value
+    elif tile_type == 2:             # PROTECTION
+        protection = True
+    elif tile_type == 3:             # MULTIPLIER
+        multiplier = True
+
+    print("HP: {}".format(H))
+    print("Protection: {}".format(protection))
+    
+    # Base cases
+    if H < 0:                               # Fail if HP negative
+        return False
+    if x == n-1 and y == n-1:               # Success if reached end tiles
+        return True
+    if memo[x][y] != None:                  # Memoize
+        return memo[x][y]
+
+    # Recursive calls
+    down = helper(n, H, tile_types, tile_values, memo, x+1, y, protection, multiplier)
+    right = helper(n, H, tile_types, tile_values, memo, x, y+1, protection, multiplier)
+    memo[x][y] = down or right
+
+    return memo[x][y]
 
 
 def write_output_file(output_file_name, result):
