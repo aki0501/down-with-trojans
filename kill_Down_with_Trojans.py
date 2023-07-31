@@ -67,9 +67,6 @@ def helper(n, H, tile_types, tile_values, memo, x, y, protection, multiplier):
     elif tile_type == 3:             # MULTIPLIER
         multiplier = True
 
-    print("HP: {}".format(H))
-    print("Protection: {}".format(protection))
-    
     # Base cases
     if H < 0:                               # Fail if HP negative
         return False
