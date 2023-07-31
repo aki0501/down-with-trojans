@@ -26,16 +26,6 @@ def print_tile_data(tile_types, tile_values):
 
 
 def DP(n, H, tile_types, tile_values):
-    # TODO
-    # Placeholder function - implement your logic here
-    # Your code to check whether it is possible to reach the bottom-right
-    # corner without running out of HP should go here.
-
-    # You should use dynamic programming to solve the problem.
-    # Return True if possible, False otherwise.
-
-    # By defualt we return False
-
     memo = [[None] * n] * n
     res = helper(n, H, tile_types, tile_values, memo, 0, 0, False, False)
 
