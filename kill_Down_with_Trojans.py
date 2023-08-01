@@ -1,3 +1,5 @@
+# Shared test cases with Cami Chou
+
 import numpy as np
 import scipy
 
@@ -33,42 +35,78 @@ def DP(n, H, tile_types, tile_values):
 
 
 def helper(n, H, tile_types, tile_values, memo, x, y, protection, multiplier):
-    # Check bounds
-    if x >= n or y >= n:
+    # Base cases
+    print("HP: {}".format(H))
+    if H < 0:                                 # Fail if HP negative
         return False
+    elif x == n and y == n-1:                   # We passed last tile successfully!
+        # print("Do I ever get here?")
+        return True
+    elif x == n-1 and y == n:                   # We passed last tile successfully!
+        # print("Do I ever get here?")
+        return True
+    elif x >= n or y >= n:                    # Fail if out of bounds
+        # print("I am out of bounds at HP: {}".format(H))
+        return False
+    elif memo[x][y] != None and memo[x][y] == True:                  # Memoize
+        # print("Returning memo")
+        return memo[x][y]
+        # return memo[x][y] if we used multiplier at that location OR memo[x][y] if we did not use multiplier at that location
 
     # Update hitpoints for current tile
     tile_value = tile_values[x][y]
     tile_type = tile_types[x][y]
 
-    if tile_type == 0:               # DAMAGE
+    if tile_type == 0:                                                      # DAMAGE
         if protection == False:
-            H -= tile_value
+            # No protection, must lose HP
+            # print("I have protection here: {}".format(protection))
+            down = helper(n, H - tile_value, tile_types, tile_values, memo, x+1, y, protection, multiplier)
+            right = helper(n, H - tile_value, tile_types, tile_values, memo, x, y+1, protection, multiplier)
+            memo[x][y] = down or right
         else:
-            protection = False
-    elif tile_type == 1:             # HEALING
-        if multiplier == True:
-            H += (2*tile_value)
-            multiplier = False
+            # print("I got protection!")
+            # print("I have protection: {}".format(protection))
+
+            # Choose to use protection, don't lose HP
+            prot_down = helper(n, H, tile_types, tile_values, memo, x+1, y, not protection, multiplier)
+            prot_right = helper(n, H, tile_types, tile_values, memo, x, y+1, not protection, multiplier)
+
+            # Choose NOT to use protection, lose HP
+            down = helper(n, H - tile_value, tile_types, tile_values, memo, x+1, y, protection, multiplier)
+            right = helper(n, H - tile_value, tile_types, tile_values, memo, x, y+1, protection, multiplier)
+
+            # print("down: {}, right: {}, prot_down: {}, prot_right: {}".format(down, right, prot_down, prot_right))
+            memo[x][y] = down or right or prot_down or prot_right
+    elif tile_type == 1:                                                    # HEALING
+        if multiplier == False:
+            # No multiplier, gain original HP
+            down = helper(n, H + tile_value, tile_types, tile_values, memo, x+1, y, protection, multiplier)
+            right = helper(n, H + tile_value, tile_types, tile_values, memo, x, y+1, protection, multiplier)
+            memo[x][y] = down or right
         else:
-            H += tile_value
-    elif tile_type == 2:             # PROTECTION
-        protection = True
-    elif tile_type == 3:             # MULTIPLIER
-        multiplier = True
+            # print("I got a multiplier!")
+            # Choose to use multiplier, gain 2xHP
+            mult_down = helper(n, H + (2*tile_value), tile_types, tile_values, memo, x+1, y, protection, not multiplier)
+            mult_right = helper(n, H + (2*tile_value), tile_types, tile_values, memo, x, y+1, protection, not multiplier)
 
-    # Base cases
-    if H < 0:                               # Fail if HP negative
-        return False
-    if x == n-1 and y == n-1:               # Success if reached end tiles
-        return True
-    if memo[x][y] != None:                  # Memoize
-        return memo[x][y]
+            # Choose NOT to use multiplier, gain original HP
+            down = helper(n, H + tile_value, tile_types, tile_values, memo, x+1, y, protection, multiplier)
+            right = helper(n, H + tile_value, tile_types, tile_values, memo, x, y+1, protection, multiplier)
 
-    # Recursive calls
-    down = helper(n, H, tile_types, tile_values, memo, x+1, y, protection, multiplier)
-    right = helper(n, H, tile_types, tile_values, memo, x, y+1, protection, multiplier)
-    memo[x][y] = down or right
+            # print("down: {}, right: {}, mult_down: {}, mult_right: {}".format(down, right, mult_down, mult_right))
+            memo[x][y] = down or right or mult_down or mult_right
+            # print("After multiplier tile, I'm getting: {}".format(memo[x][y]))
+    else:
+        if tile_type == 2:                                                  # PROTECTION
+            protection = True
+        elif tile_type == 3:                                                # MULTIPLIER
+            multiplier = True
+
+        # Recursive calls
+        down = helper(n, H, tile_types, tile_values, memo, x+1, y, protection, multiplier)
+        right = helper(n, H, tile_types, tile_values, memo, x, y+1, protection, multiplier)
+        memo[x][y] = down or right
 
     return memo[x][y]
 
