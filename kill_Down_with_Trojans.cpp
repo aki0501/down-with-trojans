@@ -13,7 +13,7 @@ struct Tile {
 void load_input_file(const std::string& file_name, int& n, int& H, std::vector<std::vector<Tile>>& tiles) {
     std::ifstream file(file_name);
     file >> n >> H;
-    
+
     // Initialize the grid
     tiles.resize(n, std::vector<Tile>(n));
 
@@ -26,7 +26,7 @@ void load_input_file(const std::string& file_name, int& n, int& H, std::vector<s
         file >> x >> y >> tile.t >> tile.v;
         tiles[x][y] = tile;
     }
-    
+
     file.close();
 }
 
@@ -55,7 +55,7 @@ bool DP(int n, int H, const std::vector<std::vector<Tile>>& tiles) {
     // corner without running out of HP should go here.
     // You should use dynamic programming to solve the problem.
     // Return true if possible, false otherwise.
-    
+
     // By default, we return false
     // TODO you should change this
     bool res = false;
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
     print_tile_data(n, tiles);
     bool result = DP(n, H, tiles);
     std::cout << "Result: " << result << '\n';
-    
+
     // Construct the output file name
     std::string output_file_name(argv[1]);
     output_file_name.insert(output_file_name.find_last_of('.'), "_out");

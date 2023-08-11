@@ -1,7 +1,7 @@
 # Shared test cases with Cami Chou
 
 import numpy as np
-import scipy
+# import scipy
 
 
 def load_input_file(file_name):
@@ -28,87 +28,102 @@ def print_tile_data(tile_types, tile_values):
 
 
 def DP(n, H, tile_types, tile_values):
-    memo = [[None] * n] * n
-    res = helper(n, H, tile_types, tile_values, memo, 0, 0, False, False)
+    memo = np.ones((n, n, 2, 2), dtype=float) * -np.inf
+    min_HP = helper(n, H, tile_types, tile_values, memo, 0, 0, 0, 0)
 
-    return res
+    if min_HP <= H:
+        return True
+    else:
+        return False
 
 
-def helper(n, H, tile_types, tile_values, memo, x, y, protection, multiplier):
+def helper(n, H, tile_types, tile_values, memo, x, y, p, m):
     # Base cases
-    print("HP: {}".format(H))
-    if H < 0:                                 # Fail if HP negative
-        return False
-    elif x == n and y == n-1:                   # We passed last tile successfully!
-        # print("Do I ever get here?")
-        return True
-    elif x == n-1 and y == n:                   # We passed last tile successfully!
-        # print("Do I ever get here?")
-        return True
-    elif x >= n or y >= n:                    # Fail if out of bounds
-        # print("I am out of bounds at HP: {}".format(H))
-        return False
-    elif memo[x][y] != None and memo[x][y] == True:                  # Memoize
-        # print("Returning memo")
-        return memo[x][y]
-        # return memo[x][y] if we used multiplier at that location OR memo[x][y] if we did not use multiplier at that location
+    if x == n-1 and y == n-1:
+        # Reached the last tile
+        if tile_types[x][y] == 0 and p == 0:
+            # Damage tile, no protection
+            value = tile_values[x][y]
+            memo[x, y, p, m] = value
+            return memo[x, y, p, m]
+        else:
+            memo[x, y, p, m] = 0
+            return memo[x, y, p, m]
+    elif x >= n or y >= n:
+        # Out of bounds
+        return np.inf
+    elif memo[x, y, p, m] != -np.inf:
+        # Spot visited before, return memo
+        return memo[x, y, p, m]
 
-    # Update hitpoints for current tile
+    # Get tile value and type for current tile
     tile_value = tile_values[x][y]
     tile_type = tile_types[x][y]
 
-    if tile_type == 0:                                                      # DAMAGE
-        if protection == False:
-            # No protection, must lose HP
-            # print("I have protection here: {}".format(protection))
-            down = helper(n, H - tile_value, tile_types, tile_values, memo, x+1, y, protection, multiplier)
-            right = helper(n, H - tile_value, tile_types, tile_values, memo, x, y+1, protection, multiplier)
-            memo[x][y] = down or right
+    if tile_type == 0:
+        # Danger tile
+        if p == 1:
+            # Currently have a protection token
+            # Use it
+            usep_right = helper(n, H, tile_types, tile_values, memo, x, y+1, 0, m)
+            usep_down = helper(n, H, tile_types, tile_values, memo, x+1, y, 0, m)
+
+            # Don't use it
+            right = helper(n, H, tile_types, tile_values, memo, x, y+1, p, m) + tile_value
+            down = helper(n, H, tile_types, tile_values, memo, x+1, y, p, m) + tile_value
+
+            memo[x, y, p, m] = min(usep_right, usep_down, right, down)
+            return memo[x, y, p, m]
         else:
-            # print("I got protection!")
-            # print("I have protection: {}".format(protection))
+            # Don't have a protection token
+            right = helper(n, H, tile_types, tile_values, memo, x, y+1, p, m) + tile_value
+            down = helper(n, H, tile_types, tile_values, memo, x+1, y, p, m) + tile_value
 
-            # Choose to use protection, don't lose HP
-            prot_down = helper(n, H, tile_types, tile_values, memo, x+1, y, not protection, multiplier)
-            prot_right = helper(n, H, tile_types, tile_values, memo, x, y+1, not protection, multiplier)
+            memo[x, y, p, m] = min(right, down)
+            return memo[x, y, p, m]
+    elif tile_type == 1:
+        # Healing tile
+        if m == 1:
+            # Currently have a multiplier token
+            # Use it
+            usem_right = helper(n, H, tile_types, tile_values, memo, x, y+1, p, 0) - (2*tile_value)
+            usem_down = helper(n, H, tile_types, tile_values, memo, x+1, y, p, 0) - (2*tile_value)
 
-            # Choose NOT to use protection, lose HP
-            down = helper(n, H - tile_value, tile_types, tile_values, memo, x+1, y, protection, multiplier)
-            right = helper(n, H - tile_value, tile_types, tile_values, memo, x, y+1, protection, multiplier)
+            # Don't use it
+            right = helper(n, H, tile_types, tile_values, memo, x, y+1, p, m) - tile_value
+            down = helper(n, H, tile_types, tile_values, memo, x+1, y, p, m) - tile_value
 
-            # print("down: {}, right: {}, prot_down: {}, prot_right: {}".format(down, right, prot_down, prot_right))
-            memo[x][y] = down or right or prot_down or prot_right
-    elif tile_type == 1:                                                    # HEALING
-        if multiplier == False:
-            # No multiplier, gain original HP
-            down = helper(n, H + tile_value, tile_types, tile_values, memo, x+1, y, protection, multiplier)
-            right = helper(n, H + tile_value, tile_types, tile_values, memo, x, y+1, protection, multiplier)
-            memo[x][y] = down or right
+            # Don't store a negative value, leads to trouble
+            if min(usem_right, usem_down, right, down) < 0:
+                memo[x, y, p, m] = 0
+            else:
+                memo[x, y, p, m] = min(usem_right, usem_down, right, down)
+            return memo[x, y, p, m]
         else:
-            # print("I got a multiplier!")
-            # Choose to use multiplier, gain 2xHP
-            mult_down = helper(n, H + (2*tile_value), tile_types, tile_values, memo, x+1, y, protection, not multiplier)
-            mult_right = helper(n, H + (2*tile_value), tile_types, tile_values, memo, x, y+1, protection, not multiplier)
+            # Don't have a multiplier token
+            right = helper(n, H, tile_types, tile_values, memo, x, y+1, p, m) - tile_value
+            down = helper(n, H, tile_types, tile_values, memo, x+1, y, p, m) - tile_value
 
-            # Choose NOT to use multiplier, gain original HP
-            down = helper(n, H + tile_value, tile_types, tile_values, memo, x+1, y, protection, multiplier)
-            right = helper(n, H + tile_value, tile_types, tile_values, memo, x, y+1, protection, multiplier)
+            if min(right, down) < 0:
+                memo[x, y, p, m] = 0
+            else:
+                memo[x, y, p, m] = min(right, down)
+            return memo[x, y, p, m]
+    elif tile_type == 2:
+        # Protection tile
+        right = helper(n, H, tile_types, tile_values, memo, x, y+1, 1, m) # 0
+        down = helper(n, H, tile_types, tile_values, memo, x+1, y, 1, m) # inf
 
-            # print("down: {}, right: {}, mult_down: {}, mult_right: {}".format(down, right, mult_down, mult_right))
-            memo[x][y] = down or right or mult_down or mult_right
-            # print("After multiplier tile, I'm getting: {}".format(memo[x][y]))
-    else:
-        if tile_type == 2:                                                  # PROTECTION
-            protection = True
-        elif tile_type == 3:                                                # MULTIPLIER
-            multiplier = True
+        memo[x, y, p, m] = min(right, down)
+        return memo[x, y, p, m]
 
-        # Recursive calls
-        down = helper(n, H, tile_types, tile_values, memo, x+1, y, protection, multiplier)
-        right = helper(n, H, tile_types, tile_values, memo, x, y+1, protection, multiplier)
-        memo[x][y] = down or right
+    elif tile_type == 3:
+        # Multiplier tile
+        right = helper(n, H, tile_types, tile_values, memo, x, y+1, p, 1)
+        down = helper(n, H, tile_types, tile_values, memo, x+1, y, p, 1)
 
-    return memo[x][y]
+        memo[x, y, p, m] = min(right, down)
+        return memo[x, y, p, m]
 
 
 def write_output_file(output_file_name, result):
